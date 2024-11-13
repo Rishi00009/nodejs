@@ -1,0 +1,63 @@
+const express = require('express');
+const fs = require('fs');
+const path = require('path');
+
+const app = express();
+const PORT = 3000;
+
+// Directory to store text files
+const FILES_DIR = path.join(__dirname, 'files');
+
+// Middleware to ensure the directory exists
+if (!fs.existsSync(FILES_DIR)) {
+  fs.mkdirSync(FILES_DIR, { recursive: true });
+}
+
+// Utility function to generate the current date-time string
+function getCurrentDateTime() {
+  const now = new Date();
+  const dateStr = now.toISOString().slice(0, 10);
+  const timeStr = now.toTimeString().slice(0, 8).replace(/:/g, '-');
+  return `${dateStr}_${timeStr}`;
+}
+
+/**
+ * API Endpoint: Create a new text file with the current timestamp as content.
+ * Route: POST /create-file
+ */
+app.post('/create-file', (req, res) => {
+  const timestamp = new Date().toISOString();
+  const fileName = `${getCurrentDateTime()}.txt`;
+  const filePath = path.join(FILES_DIR, fileName);
+
+  // Write the timestamp to a new file
+  fs.writeFile(filePath, timestamp, (err) => {
+    if (err) {
+      console.error('Error writing file:', err);
+      return res.status(500).json({ message: 'Error creating file' });
+    }
+    res.status(201).json({ message: 'File created', fileName });
+  });
+});
+
+/**
+ * API Endpoint: Retrieve all text files in the "files" directory.
+ * Route: GET /get-files
+ */
+app.get('/get-files', (req, res) => {
+  fs.readdir(FILES_DIR, (err, files) => {
+    if (err) {
+      console.error('Error reading directory:', err);
+      return res.status(500).json({ message: 'Error reading files' });
+    }
+
+    // Filter out only .txt files
+    const textFiles = files.filter(file => file.endsWith('.txt'));
+    res.status(200).json({ files: textFiles });
+  });
+});
+
+// Start the Express server
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
+});
